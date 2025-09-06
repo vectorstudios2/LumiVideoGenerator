@@ -1,0 +1,10 @@
+
+services:
+  - type: web
+    name: ai-video-generator-api 
+    env: node
+    plan: free 
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    buildpacks:
+      - url: https://github.com/heroku/heroku-buildpack-google-chrome
