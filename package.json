@@ -1,16 +1,23 @@
 {
-  "name": "video-api-backend",
+  "name": "video-api-server",
   "version": "1.0.0",
-  "description": "Backend server to automate video generation.",
+  "description": "A backend server to automate video generation.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "puppeteer",
+    "express",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "puppeteer": "^21.3.8"
+    "puppeteer-core": "^21.1.1"
   }
 }
+
