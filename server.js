@@ -29,12 +29,19 @@ app.post('/generate-video', async (req, res) => {
     let browser = null;
 
     try {
-        console.log('Launching browser...');
-        // --- START OF FIX ---
-        // We no longer specify an executablePath here.
-        // Puppeteer will automatically use the PUPPETEER_EXECUTABLE_PATH
-        // environment variable we set in the Dockerfile.
+        // --- START OF DEFINITIVE FIX ---
+        // Manually read the environment variable set in the Dockerfile and pass it directly to Puppeteer.
+        // This is the most explicit and reliable way to ensure Puppeteer finds the browser.
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
+        console.log(`Launching browser with explicit path: ${executablePath}`);
+
+        if (!executablePath) {
+             throw new Error('FATAL: PUPPETEER_EXECUTABLE_PATH environment variable is not set or not found.');
+        }
+
         browser = await puppeteer.launch({
+            executablePath, // Pass the path directly here
             headless: true,
             args: [
                 '--no-sandbox',
@@ -43,7 +50,7 @@ app.post('/generate-video', async (req, res) => {
                 '--single-process'
             ]
         });
-        // --- END OF FIX ---
+        // --- END OF DEFINITIVE FIX ---
         
         const page = await browser.newPage();
         
@@ -87,7 +94,8 @@ app.post('/generate-video', async (req, res) => {
         console.log(`Video URL: ${videoUrl}`);
         res.json({ videoUrl });
 
-    } catch (error) {
+    } catch (error)
+    {
         console.error('An error occurred during video generation:', error);
         res.status(500).json({ message: 'Failed to generate video. The process may have timed out or the API site changed.' });
     } finally {
