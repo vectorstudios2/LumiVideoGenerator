@@ -10,7 +10,7 @@ services:
     env: docker
     # The region to deploy your service in.
     # Choose one close to you from Render's list of regions.
-    region: oregon 
+    region: free 
     # The instance type. 'starter' is recommended as the free tier may
     # not have enough RAM for browser automation.
     plan: starter
