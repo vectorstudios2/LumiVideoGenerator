@@ -1,12 +1,14 @@
 # 1. Start with a standard Node.js 18 image
 FROM node:18-slim
 
-# 2. Set an environment variable to prevent Puppeteer from downloading its own Chrome
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+# --- START OF FIX ---
+# 2. Set environment variables to tell Puppeteer to skip its own download
+#    and where to find the system-installed Chrome browser. This is the key change.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+# --- END OF FIX ---
 
 # 3. Update the package manager and install all necessary dependencies for Chrome
-# This is the key step that the buildpack was failing to do correctly
 RUN apt-get update \
     && apt-get install -y \
     gconf-service \
@@ -66,3 +68,4 @@ COPY . .
 
 # 8. Tell Koyeb what command to run when the service starts
 CMD ["node", "server.js"]
+
