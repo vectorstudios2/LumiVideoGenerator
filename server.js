@@ -29,11 +29,7 @@ app.post('/generate-video', async (req, res) => {
     let browser = null;
 
     try {
-        // --- START OF DEFINITIVE FIX ---
-        // Manually read the environment variable set in the Dockerfile and pass it directly to Puppeteer.
-        // This is the most explicit and reliable way to ensure Puppeteer finds the browser.
         const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-
         console.log(`Launching browser with explicit path: ${executablePath}`);
 
         if (!executablePath) {
@@ -41,7 +37,7 @@ app.post('/generate-video', async (req, res) => {
         }
 
         browser = await puppeteer.launch({
-            executablePath, // Pass the path directly here
+            executablePath,
             headless: true,
             args: [
                 '--no-sandbox',
@@ -50,15 +46,24 @@ app.post('/generate-video', async (req, res) => {
                 '--single-process'
             ]
         });
-        // --- END OF DEFINITIVE FIX ---
         
         const page = await browser.newPage();
         
+        // --- START OF TIMEOUT FIX ---
+        // Increase the default timeout for all page operations to 2 minutes (120000 ms).
+        // This gives the Vondy website more than enough time to load on the server.
+        await page.setDefaultNavigationTimeout(120000);
+        // --- END OF TIMEOUT FIX ---
+        
         await page.setCacheEnabled(false);
-        await page.setDefaultNavigationTimeout(60000);
 
         console.log(`Navigating to ${VONDY_URL}...`);
-        await page.goto(VONDY_URL, { waitUntil: 'networkidle2' });
+        // --- START OF TIMEOUT FIX ---
+        // Change the wait condition. 'domcontentloaded' is faster and more reliable for automation.
+        // It waits for the main HTML to be ready without waiting for all images/scripts, preventing timeouts.
+        await page.goto(VONDY_URL, { waitUntil: 'domcontentloaded' });
+        console.log(`Navigation successful. Page content is loading.`);
+        // --- END OF TIMEOUT FIX ---
 
         console.log('Page loaded. Clearing and typing prompt...');
         const textAreaSelector = 'textarea[placeholder="Enter a brief description..."]';
