@@ -19,7 +19,7 @@ app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
-const VONDY_URL = 'https://www.vondy.com/ai-video-generator-free-no-sign-up--P1bPH2sK';
+const VONDY_URL = 'https://www.vondy.com/ai-video-generator-free-no-sign-up--P1bPH2sK?';
 
 app.post('/generate-video', async (req, res) => {
     const { prompt } = req.body;
@@ -49,25 +49,23 @@ app.post('/generate-video', async (req, res) => {
         
         const page = await browser.newPage();
         
-        // --- START OF TIMEOUT FIX ---
-        // Increase the default timeout for all page operations to 2 minutes (120000 ms).
-        // This gives the Vondy website more than enough time to load on the server.
-        await page.setDefaultNavigationTimeout(120000);
-        // --- END OF TIMEOUT FIX ---
+        // --- START OF DEFINITIVE TIMEOUT FIX ---
+        // Set the default timeout for ALL waiting operations on the page to 2 minutes.
+        // This replaces setDefaultNavigationTimeout and correctly applies to waitForSelector.
+        // This is the correct function to prevent the 30-second timeout error.
+        page.setDefaultTimeout(120000); 
+        // --- END OF DEFINITIVE TIMEOUT FIX ---
         
         await page.setCacheEnabled(false);
 
         console.log(`Navigating to ${VONDY_URL}...`);
-        // --- START OF TIMEOUT FIX ---
-        // Change the wait condition. 'domcontentloaded' is faster and more reliable for automation.
-        // It waits for the main HTML to be ready without waiting for all images/scripts, preventing timeouts.
+        // We can keep 'domcontentloaded' as it's efficient. The new global timeout will protect it.
         await page.goto(VONDY_URL, { waitUntil: 'domcontentloaded' });
         console.log(`Navigation successful. Page content is loading.`);
-        // --- END OF TIMEOUT FIX ---
 
         console.log('Page loaded. Clearing and typing prompt...');
         const textAreaSelector = 'textarea[placeholder="Enter a brief description..."]';
-        await page.waitForSelector(textAreaSelector);
+        await page.waitForSelector(textAreaSelector); // This is now covered by the 2-minute timeout
 
         await page.focus(textAreaSelector);
         await page.keyboard.down('Control');
@@ -79,7 +77,7 @@ app.post('/generate-video', async (req, res) => {
 
         console.log('Clicking generate button...');
         const generateButtonSelector = 'button > span.relative';
-        await page.waitForSelector(generateButtonSelector);
+        await page.waitForSelector(generateButtonSelector); // This is also covered by the 2-minute timeout
 
         const textInApiSite = await page.$eval(textAreaSelector, el => el.value);
         console.log(`Text in API site textbox before clicking: "${textInApiSite}"`);
@@ -91,7 +89,7 @@ app.post('/generate-video', async (req, res) => {
 
         console.log('Waiting for video to be generated... This might take a few minutes.');
         const videoSelector = 'video[src]';
-        await page.waitForSelector(videoSelector, { timeout: 300000 }); // 5 minutes timeout
+        await page.waitForSelector(videoSelector, { timeout: 300000 }); // 5 minutes timeout for video generation itself
 
         console.log('Video found! Extracting URL...');
         const videoUrl = await page.$eval(videoSelector, el => el.src);
