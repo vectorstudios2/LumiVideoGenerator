@@ -26,10 +26,9 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log('Launching browser...');
-        // **CHANGE:** We now provide the path to the browser installed by the buildpack
-        // and add arguments needed for the Render environment.
+        // **CHANGE:** Removed the hardcoded executablePath. 
+        // The buildpack will provide the correct path automatically.
         browser = await puppeteer.launch({
-            executablePath: '/usr/bin/google-chrome-stable',
             headless: true,
             args: [
                 '--no-sandbox',
