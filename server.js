@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer');
 const cors = require('cors');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Use port from environment variable or default to 3000
 
 // Middleware to allow our frontend to communicate with this server
 app.use(cors());
@@ -81,6 +81,7 @@ app.post('/generate-video', async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
     console.log('Waiting for requests from the frontend...');
 });
+
