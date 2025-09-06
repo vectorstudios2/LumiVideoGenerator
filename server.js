@@ -6,7 +6,6 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// --- START OF CORS FIX ---
 // Use a more explicit CORS configuration to handle preflight requests.
 // This tells the server to accept requests from any origin.
 const corsOptions = {
@@ -17,7 +16,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // enable pre-flight for all routes
-// --- END OF CORS FIX ---
 
 
 // Middleware to parse JSON bodies
@@ -38,7 +36,11 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log('Launching browser...');
+        // --- START OF FIX ---
+        // Tell puppeteer-core where to find the browser installed by the buildpack.
         browser = await puppeteer.launch({
+            executablePath: process.env.GOOGLE_CHROME_BIN || undefined,
+            // --- END OF FIX ---
             headless: true,
             args: [
                 '--no-sandbox',
