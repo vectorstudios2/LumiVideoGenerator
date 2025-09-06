@@ -1,12 +1,10 @@
 # 1. Start with a standard Node.js 18 image
 FROM node:18-slim
 
-# --- START OF FIX ---
 # 2. Set environment variables to tell Puppeteer to skip its own download
-#    and where to find the system-installed Chrome browser. This is the key change.
+#    and where to find the system-installed Chrome browser.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-# --- END OF FIX ---
 
 # 3. Update the package manager and install all necessary dependencies for Chrome
 RUN apt-get update \
