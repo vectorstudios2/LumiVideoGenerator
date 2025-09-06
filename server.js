@@ -1,9 +1,6 @@
 // This is our backend server. It uses Express for the web server and Puppeteer to control the browser.
 const express = require('express');
-// --- START OF DEFINITIVE FIX ---
-// Switch back to the full puppeteer package, as per the user's working code.
 const puppeteer = require('puppeteer');
-// --- END OF DEFINITIVE FIX ---
 const cors = require('cors');
 
 const app = express();
@@ -33,21 +30,22 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log(`Launching browser...`);
-        // --- START OF DEFINITIVE FIX ---
-        // Use the simplified launch method from the full puppeteer package.
-        // It will automatically use its own bundled, compatible version of Chromium.
-        // All executablePath logic has been removed.
+        // --- START OF FINAL FIX ---
         browser = await puppeteer.launch({
             headless: true,
+            // 1. Use a pipe for communication instead of WebSocket. This is more stable in Docker.
+            pipe: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage', // Recommended for Docker environments
+                '--disable-dev-shm-usage',
+                // 2. Disable GPU to reduce memory usage significantly.
+                '--disable-gpu',
                 '--single-process'
             ],
             timeout: 60000 // 1 minute timeout for launch
         });
-        // --- END OF DEFINITIVE FIX ---
+        // --- END OF FINAL FIX ---
         
         const page = await browser.newPage();
         
@@ -56,7 +54,6 @@ app.post('/generate-video', async (req, res) => {
         await page.setCacheEnabled(false);
 
         console.log(`Navigating to ${VONDY_URL}...`);
-        // Using networkidle2 as per your working local code, with a long timeout for safety.
         await page.goto(VONDY_URL, { 
             waitUntil: 'networkidle2',
             timeout: 120000 // 2 minute timeout for page load
