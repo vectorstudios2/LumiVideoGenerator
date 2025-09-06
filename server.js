@@ -30,22 +30,36 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log(`Launching browser...`);
-        // --- START OF FINAL FIX ---
         browser = await puppeteer.launch({
             headless: true,
-            // 1. Use a pipe for communication instead of WebSocket. This is more stable in Docker.
             pipe: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                // 2. Disable GPU to reduce memory usage significantly.
                 '--disable-gpu',
-                '--single-process'
+                '--single-process',
+                // --- START OF DEFINITIVE FIX ---
+                // Add an extensive list of flags to reduce memory usage to the absolute minimum.
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-infobars',
+                '--disable-extensions',
+                '--disable-breakpad',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-default-apps',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-popup-blocking',
+                '--disable-prompt-on-repost',
+                '--disable-renderer-backgrounding',
+                '--disable-sync'
+                // --- END OF DEFINITIVE FIX ---
             ],
             timeout: 60000 // 1 minute timeout for launch
         });
-        // --- END OF FINAL FIX ---
         
         const page = await browser.newPage();
         
@@ -95,7 +109,10 @@ app.post('/generate-video', async (req, res) => {
 
     } catch (error)
     {
-        console.error('An error occurred during video generation:', error);
+        // --- START OF DEFINITIVE FIX ---
+        // Log the full error message, which might contain browser crash logs.
+        console.error('An error occurred during video generation. Full error message:', error.message);
+        // --- END OF DEFINITIVE FIX ---
         res.status(500).json({ message: 'Failed to generate video. The process may have timed out or the API site changed.' });
     } finally {
         if (browser) {
