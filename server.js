@@ -36,6 +36,8 @@ app.post('/generate-video', async (req, res) => {
              throw new Error('FATAL: PUPPETEER_EXECUTABLE_PATH environment variable is not set or not found.');
         }
 
+        // --- START OF FINAL FIX ---
+        // Add an explicit timeout to the browser launch itself.
         browser = await puppeteer.launch({
             executablePath,
             headless: true,
@@ -44,33 +46,33 @@ app.post('/generate-video', async (req, res) => {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--single-process'
-            ]
+            ],
+            timeout: 60000 // 1 minute timeout for launch
         });
         
         const page = await browser.newPage();
         
-        // --- START OF FINAL FIX ---
         // 1. Set a realistic User-Agent to avoid being detected as a bot.
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36');
         
         // 2. Set a standard viewport size.
         await page.setViewport({ width: 1280, height: 800 });
-
-        // 3. Set a generous global timeout for all page operations to 2 minutes.
-        page.setDefaultTimeout(120000); 
         
         await page.setCacheEnabled(false);
 
         console.log(`Navigating to ${VONDY_URL}...`);
-        // 4. Use 'networkidle0' - the most patient and reliable wait condition.
-        // This waits until the page is completely quiet, ensuring all scripts have run.
-        await page.goto(VONDY_URL, { waitUntil: 'networkidle0' });
+        // 3. Use 'networkidle0' and an explicit, long timeout for navigation.
+        await page.goto(VONDY_URL, { 
+            waitUntil: 'networkidle0',
+            timeout: 120000 // 2 minute timeout for page load
+        });
         console.log(`Navigation successful. Page is fully loaded.`);
         // --- END OF FINAL FIX ---
 
         console.log('Finding textarea to clear and type prompt...');
         const textAreaSelector = 'textarea[placeholder="Enter a brief description..."]';
-        await page.waitForSelector(textAreaSelector);
+        // Add an explicit timeout for waiting for the element
+        await page.waitForSelector(textAreaSelector, { timeout: 60000 }); // 1 minute timeout
 
         await page.focus(textAreaSelector);
         await page.keyboard.down('Control');
@@ -82,7 +84,8 @@ app.post('/generate-video', async (req, res) => {
 
         console.log('Clicking generate button...');
         const generateButtonSelector = 'button > span.relative';
-        await page.waitForSelector(generateButtonSelector);
+        // Add an explicit timeout for waiting for the element
+        await page.waitForSelector(generateButtonSelector, { timeout: 60000 }); // 1 minute timeout
 
         const textInApiSite = await page.$eval(textAreaSelector, el => el.value);
         console.log(`Text in API site textbox before clicking: "${textInApiSite}"`);
