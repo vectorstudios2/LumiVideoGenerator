@@ -1,14 +1,26 @@
 // This is our backend server. It uses Express for the web server and Puppeteer to control the browser.
 const express = require('express');
-// **CHANGE:** We now use puppeteer-core
 const puppeteer = require('puppeteer-core');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3000; // Use port from environment variable or default to 3000
+const port = process.env.PORT || 3000;
 
-// Middleware to allow our frontend to communicate with this server
-app.use(cors());
+// --- START OF CORS FIX ---
+// Use a more explicit CORS configuration to handle preflight requests.
+// This tells the server to accept requests from any origin.
+const corsOptions = {
+  origin: '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // enable pre-flight for all routes
+// --- END OF CORS FIX ---
+
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
 const VONDY_URL = 'https://www.vondy.com/ai-video-generator-free-no-sign-up--P1bPH2sK';
@@ -26,8 +38,6 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log('Launching browser...');
-        // **CHANGE:** Removed the hardcoded executablePath. 
-        // The buildpack will provide the correct path automatically.
         browser = await puppeteer.launch({
             headless: true,
             args: [
@@ -39,39 +49,31 @@ app.post('/generate-video', async (req, res) => {
         });
         const page = await browser.newPage();
 
-        // Disable caching for the page to ensure a fresh load
         await page.setCacheEnabled(false);
-
-        // Increase navigation timeout
         await page.setDefaultNavigationTimeout(60000);
 
         console.log(`Navigating to ${VONDY_URL}...`);
         await page.goto(VONDY_URL, { waitUntil: 'networkidle2' });
 
         console.log('Page loaded. Clearing and typing prompt...');
-        // Wait for the textarea
         const textAreaSelector = 'textarea[placeholder="Enter a brief description..."]';
         await page.waitForSelector(textAreaSelector);
 
-        // More reliable method to clear the textarea.
         await page.focus(textAreaSelector);
         await page.keyboard.down('Control');
         await page.keyboard.press('A');
         await page.keyboard.up('Control');
         await page.keyboard.press('Backspace');
 
-        // Type the new prompt
         await page.type(textAreaSelector, prompt);
 
         console.log('Clicking generate button...');
-        // Wait for the button and click it
         const generateButtonSelector = 'button > span.relative';
         await page.waitForSelector(generateButtonSelector);
 
         const textInApiSite = await page.$eval(textAreaSelector, el => el.value);
         console.log(`Text in API site textbox before clicking: "${textInApiSite}"`);
 
-        // Using page.evaluate to click the element to be more robust
         await page.evaluate((selector) => {
             const span = document.querySelector(selector);
             if (span) span.closest('button').click();
