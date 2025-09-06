@@ -2,9 +2,9 @@
 const express = require('express');
 const puppeteer = require('puppeteer-core');
 const cors = require('cors');
-const fs = require('fs'); // We need the file system module to check for file existence
 
 const app = express();
+// Koyeb sets the PORT environment variable for you.
 const port = process.env.PORT || 3000;
 
 // Use a more explicit CORS configuration to handle preflight requests.
@@ -21,35 +21,6 @@ app.use(express.json());
 
 const VONDY_URL = 'https://www.vondy.com/ai-video-generator-free-no-sign-up--P1bPH2sK';
 
-
-// --- START OF NEW, MORE ROBUST FIX ---
-// This function will find the path to the Chrome executable.
-const getChromePath = () => {
-  // 1. Check the environment variable first.
-  let executablePath = process.env.GOOGLE_CHROME_BIN;
-  
-  // 2. If the env var is not set, check a list of common Linux paths.
-  if (!executablePath) {
-    const commonPaths = [
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium-browser',
-      '/opt/google/chrome/chrome',
-    ];
-
-    for (const path of commonPaths) {
-      if (fs.existsSync(path)) {
-        executablePath = path;
-        break; // Stop searching once we find one.
-      }
-    }
-  }
-
-  return executablePath;
-};
-// --- END OF NEW, MORE ROBUST FIX ---
-
-
 app.post('/generate-video', async (req, res) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'Prompt text is required.' });
@@ -58,16 +29,12 @@ app.post('/generate-video', async (req, res) => {
     let browser = null;
 
     try {
-        const chromePath = getChromePath();
-        console.log(`Found Chrome executable at: ${chromePath}`);
-
-        if (!chromePath) {
-          throw new Error('Could not find a compatible Chrome installation.');
-        }
-
         console.log('Launching browser...');
+        // --- START OF DOCKER FIX ---
+        // Inside our Docker container, we know exactly where Chrome is installed.
+        // We no longer need to search for it.
         browser = await puppeteer.launch({
-            executablePath: chromePath, // Use the path we found
+            executablePath: '/usr/bin/google-chrome-stable',
             headless: true,
             args: [
                 '--no-sandbox',
@@ -76,6 +43,8 @@ app.post('/generate-video', async (req, res) => {
                 '--single-process'
             ]
         });
+        // --- END OF DOCKER FIX ---
+        
         const page = await browser.newPage();
         
         await page.setCacheEnabled(false);
