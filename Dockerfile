@@ -13,9 +13,11 @@ RUN apt-get update && apt-get install -y \
     unzip \
     --no-install-recommends
 
-# Add Google Chrome's official repository
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
+# --- START OF FIX ---
+# Add Google Chrome's official repository using the new recommended (and secure) method
+RUN curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+# --- END OF FIX ---
 
 # Install Google Chrome and ChromeDriver
 RUN apt-get update && apt-get install -y \
