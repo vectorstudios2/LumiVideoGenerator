@@ -25,32 +25,51 @@ app.post('/generate-video', async (req, res) => {
 
     try {
         console.log('Launching browser...');
-        browser = await puppeteer.launch({ 
+        browser = await puppeteer.launch({
             headless: true, // Set to false to see the browser window
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
-        
+
+        // Disable caching for the page to ensure a fresh load
+        await page.setCacheEnabled(false);
+
         // Increase navigation timeout
-        await page.setDefaultNavigationTimeout(60000); 
+        await page.setDefaultNavigationTimeout(60000);
 
         console.log(`Navigating to ${VONDY_URL}...`);
         await page.goto(VONDY_URL, { waitUntil: 'networkidle2' });
 
-        console.log('Page loaded. Typing prompt...');
-        // Wait for the textarea and type the prompt
+        console.log('Page loaded. Clearing and typing prompt...');
+        // Wait for the textarea
         const textAreaSelector = 'textarea[placeholder="Enter a brief description..."]';
         await page.waitForSelector(textAreaSelector);
+
+        // **NEW & IMPROVED:** More reliable method to clear the textarea.
+        // We simulate a user focusing, pressing Ctrl+A to select all, and then Backspace.
+        await page.focus(textAreaSelector);
+        await page.keyboard.down('Control');
+        await page.keyboard.press('A');
+        await page.keyboard.up('Control');
+        await page.keyboard.press('Backspace');
+
+        // Type the new prompt
         await page.type(textAreaSelector, prompt);
 
         console.log('Clicking generate button...');
         // Wait for the button and click it
         const generateButtonSelector = 'button > span.relative';
         await page.waitForSelector(generateButtonSelector);
-        
+
+        // **NEW:** Log the text from the API site's textarea right before clicking.
+        const textInApiSite = await page.$eval(textAreaSelector, el => el.value);
+        console.log(`Text in API site textbox before clicking: "${textInApiSite}"`);
+
         // Using page.evaluate to click the element to be more robust
         await page.evaluate((selector) => {
-            document.querySelector(selector).click();
+            // Find the span and click its parent button
+            const span = document.querySelector(selector);
+            if (span) span.closest('button').click();
         }, generateButtonSelector);
 
 
@@ -63,7 +82,7 @@ app.post('/generate-video', async (req, res) => {
         console.log('Video found! Extracting URL...');
         // Extract the src attribute from the video element
         const videoUrl = await page.$eval(videoSelector, el => el.src);
-        
+
         console.log(`Video URL: ${videoUrl}`);
 
         // Send the URL back to the frontend
