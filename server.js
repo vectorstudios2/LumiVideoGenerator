@@ -4,10 +4,10 @@ const puppeteer = require('puppeteer-core');
 const cors = require('cors');
 
 const app = express();
-// Koyeb sets the PORT environment variable for you.
 const port = process.env.PORT || 3000;
 
 // Use a more explicit CORS configuration to handle preflight requests.
+// This tells the server to accept requests from any origin.
 const corsOptions = {
   origin: '*',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -15,26 +15,32 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('*', cors(corsOptions)); // enable pre-flight for all routes
 
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
 const VONDY_URL = 'https://www.vondy.com/ai-video-generator-free-no-sign-up--P1bPH2sK';
 
+// API endpoint that our frontend will call
 app.post('/generate-video', async (req, res) => {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ message: 'Prompt text is required.' });
+
+    if (!prompt) {
+        return res.status(400).json({ message: 'Prompt text is required.' });
+    }
 
     console.log(`Received prompt: "${prompt}"`);
     let browser = null;
 
     try {
         console.log('Launching browser...');
-        // --- START OF DOCKER FIX ---
-        // Inside our Docker container, we know exactly where Chrome is installed.
-        // We no longer need to search for it.
+        // --- START OF FIX ---
+        // Tell puppeteer-core where to find the browser installed by the buildpack.
         browser = await puppeteer.launch({
-            executablePath: '/usr/bin/google-chrome-stable',
+            executablePath: process.env.GOOGLE_CHROME_BIN || undefined,
+            // --- END OF FIX ---
             headless: true,
             args: [
                 '--no-sandbox',
@@ -43,10 +49,8 @@ app.post('/generate-video', async (req, res) => {
                 '--single-process'
             ]
         });
-        // --- END OF DOCKER FIX ---
-        
         const page = await browser.newPage();
-        
+
         await page.setCacheEnabled(false);
         await page.setDefaultNavigationTimeout(60000);
 
@@ -77,6 +81,7 @@ app.post('/generate-video', async (req, res) => {
             if (span) span.closest('button').click();
         }, generateButtonSelector);
 
+
         console.log('Waiting for video to be generated... This might take a few minutes.');
         const videoSelector = 'video[src]';
         await page.waitForSelector(videoSelector, { timeout: 300000 }); // 5 minutes timeout
@@ -85,6 +90,7 @@ app.post('/generate-video', async (req, res) => {
         const videoUrl = await page.$eval(videoSelector, el => el.src);
 
         console.log(`Video URL: ${videoUrl}`);
+
         res.json({ videoUrl });
 
     } catch (error) {
