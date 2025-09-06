@@ -1,10 +1,25 @@
+# render.yaml
+# This file defines the configuration for your web service on Render.
 
 services:
-  - type: web
-    name: ai-video-generator-api 
-    env: node
-    plan: free 
-    buildCommand: "npm install"
-    startCommand: "node server.js"
-    buildpacks:
-      - url: https://github.com/heroku/heroku-buildpack-google-chrome
+  # A unique name for your service
+  - name: python-video-generator
+    # The type of service. 'web' is for web servers.
+    type: web
+    # Specifies that we are using a Docker environment
+    env: docker
+    # The region to deploy your service in.
+    # Choose one close to you from Render's list of regions.
+    region: oregon 
+    # The instance type. 'starter' is recommended as the free tier may
+    # not have enough RAM for browser automation.
+    plan: starter
+    # Health check path Render uses to determine if your service is live.
+    healthCheckPath: /
+    # Automatically deploy on push to the main branch
+    autoDeploy: true
+    # Environment variables (if any were needed) would go here
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+
